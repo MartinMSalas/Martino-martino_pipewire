@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.1 Console</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<style>
+  @import url('https://cdnjs.cloudflare.com/ajax/libs/ibm-plex/6.0.0-3/css/ibm-plex-mono.min.css');
+
+  :root {
+    --body-bg: #131316;
+    --panel: #1c1c21;
+    --panel-raised: #232329;
+    --groove: #0d0d10;
+    --text-dim: #6b6b76;
+    --text: #d8d8de;
+    --accent: #e0a83e;
+    --sub: #c2483d;
+    --sub-dim: #5a2521;
+    --ok: #4caf6e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--body-bg);
+    background-image: radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent 60%);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .rack { max-width: 1040px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .rack-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0 6px 20px;
+    border-bottom: 1px solid #2c2c33;
+    margin-bottom: 26px;
+  }
+  .rack-header h1 { font-size: 15px; letter-spacing: 0.22em; font-weight: 600; margin: 0; text-transform: uppercase; }
+  .rack-header .sub { font-size: 11px; letter-spacing: 0.1em; color: var(--text-dim); }
+
+  #status-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-dim); margin-right: 7px; transition: background 0.2s;
+  }
+  #status-dot.online { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  #status-dot.error { background: var(--sub); box-shadow: 0 0 6px var(--sub); }
+
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin: 0 0 12px 4px;
+  }
+
+  /* ---------- Panel ACTIVO (grande) ---------- */
+  .active-panel { margin-bottom: 36px; }
+
+  .strips {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+
+  .strip {
+    background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+    border: 1px solid #2c2c33;
+    border-radius: 6px;
+    padding: 16px 10px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .strip.is-lfe { border-color: var(--sub-dim); }
+
+  .strip-label { font-size: 12px; letter-spacing: 0.14em; font-weight: 600; color: var(--accent); }
+  .strip.is-lfe .strip-label { color: var(--sub); }
+  .strip-label.mini { font-size: 10px; }
+
+  .readout { font-size: 13px; min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+  .readout.mini { font-size: 11px; min-width: 34px; }
+
+  .fader-row { display: flex; align-items: flex-start; gap: 8px; }
+
+  .fader-track {
+    position: relative; width: 46px; height: 220px;
+    background: repeating-linear-gradient(to top, transparent, transparent 18px, #2c2c33 18px, #2c2c33 19px), var(--groove);
+    border-radius: 4px; border: 1px solid #08080a; box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+  }
+  .fader-track.mini {
+    width: 30px; height: 130px;
+    background: repeating-linear-gradient(to top, transparent, transparent 14px, #2c2c33 14px, #2c2c33 15px), var(--groove);
+  }
+
+  input[type=range].fader {
+    -webkit-appearance: none; appearance: none;
+    position: absolute; top: 0; left: 0;
+    width: 220px; height: 46px; margin: 0; background: transparent;
+    transform: rotate(-90deg) translate(-220px, 0); transform-origin: top left;
+    cursor: ns-resize;
+  }
+  input[type=range].fader::-webkit-slider-runnable-track { background: transparent; height: 46px; }
+  input[type=range].fader::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 40px; height: 22px; border-radius: 3px;
+    background: linear-gradient(180deg, #4a4a52, #2a2a30); border: 1px solid #58585f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.6); margin-top: 12px; cursor: grab;
+  }
+  .strip:not(.is-lfe) input[type=range].fader::-webkit-slider-thumb { border-top: 2px solid var(--accent); }
+  .strip.is-lfe input[type=range].fader::-webkit-slider-thumb { border-top: 2px solid var(--sub); }
+  input[type=range].fader::-moz-range-track { background: transparent; height: 46px; }
+  input[type=range].fader::-moz-range-thumb {
+    width: 40px; height: 22px; border-radius: 3px;
+    background: linear-gradient(180deg, #4a4a52, #2a2a30); border: 1px solid #58585f; cursor: grab;
+  }
+
+  input[type=range].fader.mini {
+    width: 130px; height: 30px;
+    transform: rotate(-90deg) translate(-130px, 0);
+  }
+  input[type=range].fader.mini::-webkit-slider-runnable-track { height: 30px; }
+  input[type=range].fader.mini::-webkit-slider-thumb { width: 26px; height: 16px; margin-top: 7px; }
+  input[type=range].fader.mini::-moz-range-track { height: 30px; }
+  input[type=range].fader.mini::-moz-range-thumb { width: 26px; height: 16px; }
+
+  .reset-btn {
+    width: 24px; height: 24px; flex-shrink: 0; border-radius: 3px;
+    border: 1px solid #3a3a42; background: linear-gradient(180deg, #2a2a30, #1e1e23);
+    color: var(--text-dim); font-size: 12px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .reset-btn.mini { width: 18px; height: 18px; font-size: 10px; }
+  .strip:not(.is-lfe) .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .strip.is-lfe .reset-btn:hover { border-color: var(--sub); color: var(--sub); }
+  .reset-btn:active { transform: translateY(1px); }
+
+  /* ---------- Fila de presets ---------- */
+  .presets-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+  .preset-panel {
+    background: linear-gradient(180deg, #1a1a1f, #17171b);
+    border: 1px solid #2c2c33;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .preset-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .preset-name {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .save-btn {
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 5px 8px;
+    background: transparent;
+    border: 1px solid #3a3a42;
+    color: var(--text-dim);
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .save-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .activate-btn {
+    display: block;
+    width: 100%;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 12px;
+    margin-bottom: 14px;
+    background: linear-gradient(180deg, #2a2119, #201a14);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .activate-btn:hover { background: var(--accent); color: #1a1a1e; }
+  .activate-btn:active { transform: translateY(1px); }
+
+  .strips-mini {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  .strip-mini { padding: 10px 4px 12px; gap: 8px; }
+
+  footer {
+    margin-top: 30px;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    padding: 0 6px;
+  }
+
+  @media (max-width: 900px) {
+    .presets-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .strips { grid-template-columns: repeat(3, 1fr); row-gap: 20px; }
+    .strips-mini { grid-template-columns: repeat(3, 1fr); row-gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="rack">
+  <div class="rack-header">
+    <h1>5.1 Console</h1>
+    <div class="sub"><span id="status-dot"></span><span id="status-text">conectando…</span></div>
+  </div>
+
+  <div class="active-panel">
+    <div class="section-title">Activo — controla la salida real</div>
+    <div class="strips" id="master-strips"></div>
+  </div>
+
+  <div class="section-title">Presets</div>
+  <div class="presets-row">
+    <div class="preset-panel">
+      <div class="preset-header">
+        <span class="preset-name">Música</span>
+        <button class="save-btn" data-preset="musica">Guardar Default</button>
+      </div>
+      <button class="activate-btn" data-preset="musica">Activar Preset</button>
+      <div class="strips-mini" id="preset-strips-musica"></div>
+    </div>
+
+    <div class="preset-panel">
+      <div class="preset-header">
+        <span class="preset-name">Docs</span>
+        <button class="save-btn" data-preset="docs">Guardar Default</button>
+      </div>
+      <button class="activate-btn" data-preset="docs">Activar Preset</button>
+      <div class="strips-mini" id="preset-strips-docs"></div>
+    </div>
+
+    <div class="preset-panel">
+      <div class="preset-header">
+        <span class="preset-name">Películas</span>
+        <button class="save-btn" data-preset="peliculas">Guardar Default</button>
+      </div>
+      <button class="activate-btn" data-preset="peliculas">Activar Preset</button>
+      <div class="strips-mini" id="preset-strips-peliculas"></div>
+    </div>
+  </div>
+
+  <footer>doble clic en un fader, o el botón □, lo devuelve a su default (el del "Activo" es el valor que había al cargar la página; el de cada preset es el último guardado con "Guardar Default").</footer>
+</div>
+
+<script>
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+const PRESET_KEYS = ['musica', 'docs', 'peliculas'];
+const PRESET_TITLES = { musica: 'Música', docs: 'Docs', peliculas: 'Películas' };
+
+let masterDefaults = [];
+const presetDefaults = {};
+const presetValues = {};
+
+function setStatus(state, msg) {
+  statusDot.className = state;
+  statusText.textContent = msg;
+}
+
+/**
+ * Renderiza un set de faders dentro de un contenedor.
+ * channels: [{ shortName, percent }, ...]
+ * options: { size: 'normal'|'mini', getDefault(index), onChange(index, value) }
+ */
+function renderPanel(container, channels, options) {
+  container.innerHTML = '';
+  const isMini = options.size === 'mini';
+  const sizeClass = isMini ? ' mini' : '';
+
+  channels.forEach((ch, i) => {
+    const isLfe = ch.shortName === 'LFE';
+    const strip = document.createElement('div');
+    strip.className = 'strip' + (isLfe ? ' is-lfe' : '') + (isMini ? ' strip-mini' : '');
+    strip.innerHTML = `
+      <div class="strip-label${sizeClass}">${ch.shortName}</div>
+      <div class="readout${sizeClass}" data-readout>${ch.percent}%</div>
+      <div class="fader-row">
+        <div class="fader-track${sizeClass}">
+          <input type="range" class="fader${sizeClass}" min="0" max="130" value="${ch.percent}" data-index="${i}">
+        </div>
+        <button class="reset-btn${sizeClass}" data-index="${i}" title="Volver a default">□</button>
+      </div>
+    `;
+    container.appendChild(strip);
+  });
+
+  container.querySelectorAll('input.fader').forEach(input => {
+    const readout = input.closest('.strip').querySelector('[data-readout]');
+
+    input.addEventListener('input', () => { readout.textContent = input.value + '%'; });
+
+    input.addEventListener('change', () => {
+      const index = parseInt(input.dataset.index, 10);
+      options.onChange(index, parseInt(input.value, 10));
+    });
+
+    input.addEventListener('dblclick', () => {
+      const index = parseInt(input.dataset.index, 10);
+      const def = options.getDefault(index);
+      input.value = def;
+      readout.textContent = def + '%';
+      options.onChange(index, def);
+    });
+  });
+
+  container.querySelectorAll('.reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const index = parseInt(btn.dataset.index, 10);
+      const input = container.querySelector(`input.fader[data-index="${index}"]`);
+      const readout = input.closest('.strip').querySelector('[data-readout]');
+      const def = options.getDefault(index);
+      input.value = def;
+      readout.textContent = def + '%';
+      options.onChange(index, def);
+    });
+  });
+}
+
+/* ---------- Panel Activo ---------- */
+
+const masterContainer = document.getElementById('master-strips');
+
+function renderMaster(channels) {
+  renderPanel(masterContainer, channels, {
+    size: 'normal',
+    getDefault: i => masterDefaults[i],
+    onChange: (index, value) => sendVolume(index, value)
+  });
+}
+
+async function sendVolume(index, value) {
+  try {
+    const res = await fetch(`/api/volumes/${index}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Error al aplicar el volumen');
+    }
+    setStatus('online', 'sincronizado');
+  } catch (e) {
+    setStatus('error', e.message);
+  }
+}
+
+async function loadMaster() {
+  const res = await fetch('/api/state');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'No se pudo leer el sink');
+  }
+  const channels = await res.json();
+  masterDefaults = channels.map(c => c.percent);
+  renderMaster(channels);
+  return channels;
+}
+
+/* ---------- Presets ---------- */
+
+async function loadPresets(masterChannels) {
+  let saved = {};
+  try {
+    const res = await fetch('/api/presets');
+    if (res.ok) saved = await res.json();
+  } catch (e) { /* si falla, cada preset arranca vacío (= valores del activo) */ }
+
+  PRESET_KEYS.forEach(key => {
+    const savedValues = saved[key];
+    const initialValues = (savedValues && savedValues.length === masterChannels.length)
+      ? savedValues.slice()
+      : masterChannels.map(c => c.percent);
+
+    presetDefaults[key] = initialValues.slice();
+    presetValues[key] = initialValues.slice();
+
+    const channelsForPanel = masterChannels.map((c, i) => ({ shortName: c.shortName, percent: initialValues[i] }));
+    const container = document.getElementById(`preset-strips-${key}`);
+
+    renderPanel(container, channelsForPanel, {
+      size: 'mini',
+      getDefault: i => presetDefaults[key][i],
+      onChange: (i, value) => { presetValues[key][i] = value; }
+    });
+  });
+}
+
+async function activatePreset(key) {
+  try {
+    const res = await fetch(`/api/presets/${key}/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(presetValues[key])
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'No se pudo activar el preset');
+    }
+    const channels = await res.json();
+    renderMaster(channels);
+    setStatus('online', `preset "${PRESET_TITLES[key]}" activado`);
+  } catch (e) {
+    setStatus('error', e.message);
+  }
+}
+
+async function savePreset(key) {
+  try {
+    const res = await fetch(`/api/presets/${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(presetValues[key])
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'No se pudo guardar el preset');
+    }
+    presetDefaults[key] = presetValues[key].slice();
+    setStatus('online', `"${PRESET_TITLES[key]}" guardado como default`);
+  } catch (e) {
+    setStatus('error', e.message);
+  }
+}
+
+document.querySelectorAll('.activate-btn').forEach(btn => {
+  btn.addEventListener('click', () => activatePreset(btn.dataset.preset));
+});
+document.querySelectorAll('.save-btn').forEach(btn => {
+  btn.addEventListener('click', () => savePreset(btn.dataset.preset));
+});
+
+/* ---------- Init ---------- */
+
+async function init() {
+  try {
+    const masterChannels = await loadMaster();
+    await loadPresets(masterChannels);
+    setStatus('online', 'conectado');
+  } catch (e) {
+    setStatus('error', e.message);
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
