@@ -8,3 +8,4 @@ package com.audio.mixer;
  */
 public record ChannelVolume(String label, String shortName, int percent) {
 }
+    
